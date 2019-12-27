@@ -5,7 +5,9 @@
 .App-logo {
   height: 40vmin;
 }
-
+.appDiv{
+  position: absolute; top: 0; left: 0; height: 100%; width: 100%;
+}
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
