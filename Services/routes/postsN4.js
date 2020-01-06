@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const redisConnection = require('../src/RedisConnection.js');
 
 var types=["desert","lunch","dinner","breakfast"];
 router.get('/',(req,res)=>{
@@ -10,73 +11,98 @@ router.post('/createPost', (req, res) =>
 { 
   var ourdate=new Date();
    
-  const post = 
-  {
+  const post = {
     tittle: req.body.tittle,
     description:req.body.description,
-    type:req.body.type,
     createdAt:ourdate.toISOString()
   }
   var neo4jClient = require('../src/Neo4JConnection');
   neo4jClient.session.run('Match(post:Post {tittle:{tittle}}) return post',
-  {
-    tittle:post.tittle})
-         .then((result)=>
-         {
-            if((result.records.length)!=0)
-              {
-                const error =  {
-                  username : '${post.tittle} is already in use',
-                  status : 400
-                }
-                throw error;
-              }
-              else
-              { 
-                 if(types.includes(post.type))
-                 {
-                    neo4jClient.session.run('CREATE (post:Post {tittle:{tittle}'+
-                    ',description : {description}, type : {type}, createdAt : {createdAt}}) return post',
-                {
-                   
-                     ...post 
-                 
-                }).then(results => {
-
-                  
-                    
-                    neo4jClient.session.run('Match (user:User {username:{username}}), (post:Post {tittle:{tittle}})'+
-                    'MERGE (user)-[r:Posted]-(post) return r',
-                    {
-                        username:req.body.username,
-                        tittle:post.tittle
-                    })
-                    .then(results=> res.send(results.records[0].get('r')))
-                    .catch(error=> res.send(error))
-                    
-                    
-                
-                
-                });
-                 }
-                 else
-                 {
-                    const error =  {
-                        username : '${post.type} is not valid',
-                        status : 400
-                      }
-                      throw error;
-                 } 
-            } 
-               
-         }).catch(error=>res.send(error))
+  { tittle:post.tittle })
+    .then((result)=> {
+      if((result.records.length)!=0){
+        const error =  {
+          message : 'Tittle is already in use',
+          status : 400
+        }
+        throw error;
+      }
+      else { 
+        neo4jClient.session.run('Match (user:User {username:{username}})'+
+                              'CREATE (post:Post {tittle:{tittle}'+
+                              ',description : {description}, createdAt : {createdAt}})'+
+                              'Create (user)-[r:Posted]->(post) return r',
+                              {
+                                username:req.body.username,
+                                ...post
+                              })
+                                .then(results => {
+                                  Promise.all( req.body.type.map(type=>{
+                                    var session = neo4jClient.driver.session();
+                                    return session.run('Match (post:Post {tittle:{tittle}})'+
+                                    'MERGE (type:Type {type:{type}})'+
+                                    'Create (post)-[r:IsOf]->(type)',
+                                    {
+                                      tittle:post.tittle,
+                                      type:type
+                                    });
+                                  })).then(data=>{
+                                    var object={
+                                      message:"Post created",
+                                      status:200
+                                    }
+                                    res.send(object)
+                                  });
+                                
+                                
+                                }).catch(error=>res.send(error));
+      }}).catch(error=>res.send(error));
 });
+
+router.get('/getAllPosts',function(req,res){
+
+  var neo4jClient = require('../src/Neo4JConnection');
+  neo4jClient.session.run('Match(post:Post) return post')
+  .then((result)=>
+         {
+          if((result.records.length)==0)
+          {
+            const error =  {
+              username : 'no posts found',
+              status : 400
+            }
+            throw error;
+          }
+          else
+          {
+           var postArray=[];
+           result.records.forEach(record=>
+            
+             postArray.push({
+                 ...record.get('post').properties
+
+             })
+          
+           )
+           res.send(postArray)
+         } 
+          
+         })
+         .catch((error)=>{
+              res.send(error);
+         }
+         )
+
+
+
+
+})
 
 router.get('/getPostByUser/:username', function(req, res, next) 
 { 
 
   var neo4jClient = require('../src/Neo4JConnection');
-  neo4jClient.session.run('Match(user:User {username: {username}})-[:Posted]-(post) return post',{username:req.params.username})
+  neo4jClient.session.run('Match(user:User {username: {username}})-[:Posted]->(post) return post',{username:req.params.username})
   .then((result)=>
          {
           if((result.records.length)==0)
@@ -109,68 +135,50 @@ router.get('/getPostByUser/:username', function(req, res, next)
   
 });
 
-router.get('/getPostByType/:type', function(req, res, next) 
-{ 
-  var neo4jClient = require('../src/Neo4JConnection');
-  neo4jClient.session.run('Match(post:Post {type: {type}}) return post',{type:req.params.type})
-  .then((result)=>
-         {
-          if((result.records.length)==0)
-          {
+router.get('/getPost/:title', function(req, res, next) 
+{ console.log(req.params.title)
+  redisConnection.createConnection().then((client)=>{
+    client.hgetall('post:'+req.params.title,(err,results)=>{
+      if (results===null) {
+        console.log("Radi");
+        var neo4jClient = require('../src/Neo4JConnection');
+        neo4jClient.session.run('Match(post:Post {tittle: {title}}) return post',{title:req.params.title})
+        .then((result)=>{
+          if((result.records.length)==0){
             const error =  {
-              username : 'No posts found',
+              message : 'No post found',
               status : 400
             }
             throw error;
-          }
-          else
-          {
-            var postArray=[];
-            result.records.forEach(record=>
-             
-              postArray.push({
-                  ...record.get('post').properties
- 
-              })
-            //res.send(result.records[0].get('post'));
-            )
-            res.send(postArray)
-          } 
-          
-         })
-         .catch((error)=>{
-              res.send(error);
-         }
-         )
-  
-});
-
-router.get('/getPost/:tittle', function(req, res, next) 
-{ 
-  var neo4jClient = require('../src/Neo4JConnection');
-  neo4jClient.session.run('Match(post:Post {tittle: {tittle}}) return post',{tittle:req.params.tittle})
-  .then((result)=>
-         {
-          if((result.records.length)==0)
-          {
-            const error =  {
-              username : 'No post found',
-              status : 400
+          } else{
+            var myPost=result.records[0].get('post').properties;
+            redisConnection.createConnection().then((client)=>{
+              client.hmset(['post:'+req.params.title,"title",myPost.tittle,"description",myPost.description,"createdAt",myPost.createdAt],(err,result)=>{
+                if(err)
+                console.log(err)
+                else
+                  client.expire('post:'+req.params.title,300);
+              })})
+            const object =  {
+              message : 'Post found',
+              post:myPost,
+              status : 200
             }
-            throw error;
-          }
-          else
-          {
-            
-            res.send(result.records[0].get('post'))
-          } 
-          
-         })
-         .catch((error)=>{
-              res.send(error);
-         }
-         )
-  
+            res.send(object)
+          }})
+          .catch((error)=>{
+            res.send(error);
+          })   
+      } else {
+        const object =  {
+          message : 'Post found',
+          post:results,
+          status : 200
+        }
+        res.send(object);
+      }
+    })
+  });
 });
 
 router.post('/getPostsOfType',(req,res)=>{

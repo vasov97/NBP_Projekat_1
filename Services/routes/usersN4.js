@@ -8,26 +8,51 @@ router.get('/', function(req, res, next)
 });
 
 router.post('/createUser', (req, res) =>{ 
+  console.log(req.body)
   const user = {
     username : req.body.username,
     password : hash(req.body.password,{salt:req.body.username}),
     email : req.body.email 
   }
   var neo4jClient = require('../src/Neo4JConnection');
-  neo4jClient.session.run('Match (user:User {username: {username}}) return user',{username:user.username})
+  neo4jClient.session.run('Match (user:User {email: {email}}) return user',{email:user.email})
     .then((result)=>{
         if((result.records.length)!=0){
+           
           const error =  {
-            username : '${user.username} is already in use',
+            message : 'Email is already in use',
             status : 400
           }
           throw error;
         }
         else{
-          neo4jClient.session.run('CREATE (user:User {username :{username}, password : {password}, email : {email}}) return user',
-          {
-            ...user
-          }).then(results => {res.send(results.records[0].get('user'))});
+            
+          neo4jClient.session.run("Match (user:User {username:{username}}) return user",{username:user.username})
+          .then((result)=>{
+            if((result.records.length)!=0){
+           
+              const error =  {
+                message : 'Username is already in use',
+                status : 400
+              }
+              throw error;
+            }
+            else
+            {
+              neo4jClient.session.run('CREATE (user:User {username :{username}, password : {password}, email : {email}}) return user',
+              {
+                ...user
+              }).then(results => {
+                var object={
+                  message:"Profile created!",
+                  status:200,
+                 
+                }
+                res.send(object)
+              });
+            }
+          })
+          .catch(error=>res.send(error))
         }}).catch(error=>res.send(error))
 });
 
@@ -35,15 +60,14 @@ router.post('/login', function(req, res)
 { 
   const user = {
     username : req.body.username,
-    email : req.body.email,
     password : req.body.password
   }
   var neo4jClient = require('../src/Neo4JConnection');
   neo4jClient.session.run('Match(user:User {username: {username}}) return user',{username:user.username})
   .then((result)=>{
-    if(!(result.records)){
+    if(result.records.length==0){
       const error =  {
-        username : '${user.username} is already in use',
+        message : "User not found",
         status : 400
       }
       throw error;
@@ -51,10 +75,17 @@ router.post('/login', function(req, res)
       else {
         const newUser = result.records[0].get('user');
         if(compare(user.password,newUser.properties.password))
-          res.send(newUser);
+          { 
+            var object={
+            message:"Loging in!",
+            user:newUser.properties,
+            status:200
+          }
+            res.send(object);
+          }
         else {
           const error =  {
-            username : 'Wrong password',
+            message : 'Wrong password',
             status : 400
           }
           throw error;

@@ -19,22 +19,20 @@ class Login extends Component{
         
         return(
        <div className='loginDiv'>
- <div className='centerDiv'>
-  <h2 className='welcomeH2'>Welcome to Coolinary!</h2>
-<div className="container centeredDiv" id="container">
-	<div className="form-container sign-up-container">
-		<form action="#">
-            <CreateAccount/>
-			
-		</form>
-	</div>
-	<div className="form-container sign-in-container">
-		<form action="#">
-            <SingIn/>
-			
-		</form>
-	</div>
-	<div className="overlay-container">
+       <div className='centerDiv'>
+       <h2 className='welcomeH2'>Welcome to Coolinary!</h2>
+       <div className="container centeredDiv" id="container">
+	   <div className="form-container sign-up-container">
+	   <div className='startPageDiv'>
+			<CreateAccount/>
+		</div>
+	 </div>
+	 <div className="form-container sign-in-container">
+            <div className='startPageDiv'>
+				<SingIn/>
+			</div>
+	 </div>
+	 <div className="overlay-container">
 		<div className="overlay">
 			<div className="overlay-panel overlay-left">
 				<h1>Welcome Back!</h1>
@@ -47,10 +45,10 @@ class Login extends Component{
 				<button onClick={this.handleSignUp} className="ghost" id="signUp">Sign Up</button>
 			</div>
 		</div>
-	</div>
-</div>
-</div>
-</div>
+	 </div>
+    </div>
+    </div>
+    </div>
 
          
         )
