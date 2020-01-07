@@ -31,7 +31,7 @@ class SingIn extends Component{
           .then((data) => {
            if(data.status==200)
            {
-               
+               //ubaci u redis logovanog usera
                this.props.history.push("/Home")
            }
            else

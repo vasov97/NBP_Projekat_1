@@ -68,7 +68,7 @@ router.get('/getAllPosts',function(req,res){
           if((result.records.length)==0)
           {
             const error =  {
-              username : 'no posts found',
+              username : 'No posts found',
               status : 400
             }
             throw error;
@@ -84,7 +84,12 @@ router.get('/getAllPosts',function(req,res){
              })
           
            )
-           res.send(postArray)
+           var object={
+             message:'Posts',
+             status:200,
+             posts:postArray,
+           }
+           res.send(object)
          } 
           
          })
