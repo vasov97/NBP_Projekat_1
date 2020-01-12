@@ -1,4 +1,5 @@
 var express = require('express');
+const md5 = require("md5");
 var router = express.Router();
 
 
@@ -59,43 +60,41 @@ router.post('/login', function(req, res)
 router.post('/likePost',(req,res)=>{
   const NeoClient=require('../src/Neo4JConnection');
   const session = NeoClient.driver.session();
-  let datum=new Date().toLocaleDateString('en-GB',{timeZone:'UTC'});
-  let queryString="MATCH (user:User), (post:Post) WHERE ID(user)=$userId AND ID(post)=$postId "
+  let queryString="MATCH (user:User), (post:Post) WHERE user.username=$username AND post.title=$postTitle "
                 + "MERGE (user)-[l:Likes]->(post) "
                 + "ON CREATE SET l.date=$date";
   session.run(queryString,{
-    userId:parseInt(req.body.userId),
-    postId:parseInt(req.body.postId),
-    date:datum
+    username:req.body.username,
+    postTitle:req.body.postTitle,
+    date:req.body.date
   })
-    .then((result)=>{
-        res.send({queryResult:true});
-        session.close();
-    })
-    .catch(error=>{
-        res.send({queryResult:false});
-        session.close();
-    });
+  .then((result)=>{
+    res.send(NeoClient.createResponse("Like created"));
+    session.close();
+  })
+  .catch(error=>{
+    res.send(NeoClient.createError("Unable to like post"));
+    session.close();
+  });
 });
 
 router.post('/unlikePost',(req,res)=>{
   const NeoClient=require('../src/Neo4JConnection');
   const session = NeoClient.driver.session();
-  let queryString = "MATCH (user:User),(post:Post) WHERE ID(user)=$userId AND ID(post)=$postId "
+  let queryString = "MATCH (user:User),(post:Post) WHERE user.username=$username AND post.title=$postTitle "
                   + "OPTIONAL MATCH (user)-[l:Likes]-(post) DELETE l"
   session.run(queryString,{
-    userId:parseInt(req.body.userId),
-    postId:parseInt(req.body.postId)
+    username:req.body.username,
+    postTitle:req.body.postTitle,
   })
-    .then((result)=>{
-        res.send({queryResult:true});
-        session.close();
-    })
-    .catch(error=>{
-        res.send(NeoClient.session);
-        res.send({queryResult:false});
-        session.close();
-    });
+  .then((result)=>{
+    res.send(NeoClient.createResponse("Post is disliked"));
+    session.close();
+  })
+  .catch(error=>{
+    res.send(NeoClient.createError("Unable to dislike post"));
+    session.close();
+  });
 });
 
 router.get('/getUser/:username', function(req, res, next) 
@@ -117,7 +116,7 @@ router.get('/getUser/:username', function(req, res, next)
     })
 });
 
-const md5 = require("md5");
+
 
 function hash(rawPassword, options = {}) {
 
