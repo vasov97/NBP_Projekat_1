@@ -39,7 +39,7 @@ render(){
 
   const post=this.props.post;
   const user=this.props.user;
- 
+  
   const bull = <span className={useStyles.bullet}>•</span>;
   let displayDescription=post.description.slice(0,(post.description.length)/2)
   displayDescription=displayDescription+'...'

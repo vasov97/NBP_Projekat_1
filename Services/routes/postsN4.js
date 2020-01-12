@@ -175,7 +175,13 @@ router.get('/getTopLiked/:topN',(req,res)=>{
     topN:parseInt(req.params.topN)
   })
   .then(result=>{
-    res.send(NeoClient.createResponse("Top list",getTopList(result.records)));
+    if(result.records.length === 0)
+      {
+        console.log(result.records.length)
+        res.send(NeoClient.createError("No posts found"));
+      }
+    else
+      res.send(NeoClient.createResponse("Top list",getTopList(result.records)));
   })
   .catch(error=>{
     console.log(error);
