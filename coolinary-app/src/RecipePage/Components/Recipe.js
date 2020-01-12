@@ -4,7 +4,7 @@ import React,{Component} from 'react';
 
 
 
-class Receipt extends Component{
+class Recipe extends Component{
 
     
     render(){  
@@ -19,4 +19,4 @@ class Receipt extends Component{
     }
 } 
 
-export default Receipt;
+export default Recipe;

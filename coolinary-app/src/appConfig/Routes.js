@@ -2,7 +2,9 @@ export const loginAndSingupsRoute = "/"
 
 export const homePageRoute = '/Home'
 
-export const receiptPageRoute='/Receipt'
+export const recipePageRoute='/Recipe'
+
+export const createRecipePageRoute='/CreateRecipe'
 
 
 

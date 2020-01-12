@@ -40,51 +40,6 @@ router.post('/createPost', (req, res) =>{
 router.get('/getAllPosts',function(req,res){
   
   var neo4jClient = require('../src/Neo4JConnection');
-<<<<<<< HEAD
-  neo4jClient.session.run('Match(post:Post) return post')
-  .then((result)=>
-         {
-          if((result.records.length)==0)
-          {
-            const error =  {
-              username : 'No posts found',
-              status : 400
-            }
-            throw error;
-          }
-          else
-          {
-           var postArray=[];
-           result.records.forEach(record=>
-            
-             postArray.push({
-                 ...record.get('post').properties
-
-             })
-          
-           )
-           var object={
-             message:'Posts',
-             status:200,
-             posts:postArray,
-           }
-           res.send(object)
-         } 
-          
-         })
-         .catch((error)=>{
-              res.send(error);
-         }
-         )
-
-
-
-
-})
-
-router.get('/getPostByUser/:username', function(req, res, next) 
-{ 
-=======
   neo4jClient.session.run('MATCH(post:Post) RETURN post ORDER BY post.createdAT LIMIT 25')
   .then((result)=>{
     if((result.records.length)==0)
@@ -113,7 +68,6 @@ router.get('/getPostByUser/:username', function(req, res, next)
     res.send(error);
   })
 });
->>>>>>> RedisCache
 
 router.get('/getPostsByUser/:username', function(req, res, next) 
 {
@@ -151,8 +105,8 @@ router.get('/getPost/:title', function(req, res, next)
   redisConnection.createConnection().then((client)=>{
     client.hgetall('post:'+req.params.title,(err,results)=>{
       if (results===null) {
-      var neo4jClient = require('../src/Neo4JConnection');
-      neo4jClient.session.run('MATCH (post:Post {title: {title}}) RETURN post',{title:req.params.title})
+        var neo4jClient = require('../src/Neo4JConnection');
+        neo4jClient.session.run('MATCH (post:Post {title: {title}}) RETURN post',{title:req.params.title})
         .then((result)=>{
           if((result.records.length)==0)
             throw neo4jClient.createError("No post found");
@@ -210,6 +164,31 @@ router.get('/getTypesOfPost/:title',(req,res)=>{
     })
 });
 
+router.get('/getTopLiked/:topN',(req,res)=>{
+  const NeoClient=require('../src/Neo4JConnection');
+  const session = NeoClient.driver.session();
+  let queryString = "MATCH (user:User)-[l:Likes]->(post:Post) "
+                  + "RETURN post, COUNT(l) as numberOfLikes "
+                  + "ORDER BY numberOfLikes DESC "
+                  + "LIMIT $topN";
+  session.run(queryString,{
+    topN:parseInt(req.params.topN)
+  })
+  .then(result=>{
+    if(result.records.length === 0)
+      {
+        console.log(result.records.length)
+        res.send(NeoClient.createError("No posts found"));
+      }
+    else
+      res.send(NeoClient.createResponse("Top list",getTopList(result.records)));
+  })
+  .catch(error=>{
+    console.log(error);
+    res.send(NeoClient.createError("Error fetching liked posts"))
+  })
+})
+
 function getPostFromRecord(record){
     var myPost = {
         title:record._fields[0].properties.title,
@@ -224,6 +203,17 @@ function getTypeFromRecord(record){
         type:record._fields[0].properties.type
     }
     return myType;
+}
+
+function getTopList(records){
+  let array = [];
+  records.forEach((record)=>{
+    array.push({
+      post:record.get('post').properties,
+      numOfLikes:record.get('numberOfLikes')
+    });
+  })
+  return array;
 }
 
 module.exports=router;

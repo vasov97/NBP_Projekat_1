@@ -2,12 +2,15 @@ import React from 'react'
 import { BrowserRouter, Route } from 'react-router-dom'
 import Login from "../LoginPage/Components/Login.js"
 import Home from "../HomePage/Components/Home.js"
-import Receipt from '../ReceiptPage/Components/Receipt'
+import Recipe from '../RecipePage/Components/Recipe'
+import CreateRecipe from '../RecipePage/Components/CreateRecipe'
+
 
 import {
     loginAndSingupsRoute,
     homePageRoute, 
-    receiptPageRoute,
+    recipePageRoute,
+    createRecipePageRoute,
 
 } from "./Routes";
 
@@ -17,8 +20,8 @@ const Router = () => {
         <BrowserRouter>
             <Route  exact path={loginAndSingupsRoute} render={() => <Login /> }/> 
             <Route  path={homePageRoute} render={()=><Home />} />  
-            <Route  path={receiptPageRoute} render={()=><Receipt />} />
-              
+            <Route  path={recipePageRoute} render={()=><Recipe />} />
+            <Route  path={createRecipePageRoute} render={()=><CreateRecipe />} />
         </BrowserRouter>
     )
 }
