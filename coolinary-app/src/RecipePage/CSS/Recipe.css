@@ -15,3 +15,22 @@
     justify-content: space-evenly;
    
 }
+
+.recipeDiv{
+    display:flex;
+    position: absolute; top: 0; left: 0; height: 100%; width: 100%;
+    flex-direction:row;
+   
+}
+.recipeDataDiv{
+    display:flex;
+    top: 0; left: 0; height: 100%; 
+    flex-direction:column;
+    align-items: center;
+
+   
+}
+
+.divFlexElement{
+    flex-grow: 5;
+}

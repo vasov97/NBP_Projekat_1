@@ -21,15 +21,8 @@ class LisOfCards extends Component{
                     </li>
                 )
             } 
-            {/* <li className='MyMuiListItem-root'>
-              <Card/>
-            </li>
-            <li className='MyMuiListItem-root'>
-              <Card/>
-            </li >
-            <li className='MyMuiListItem-root'>
-              <Card/>
-            </li> */}
+            
+            
             </ul>
          
         )

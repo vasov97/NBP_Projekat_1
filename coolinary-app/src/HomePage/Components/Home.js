@@ -62,13 +62,7 @@ class Home extends Component{
         return(
           
              <div className='flex-container'>
-                 {/* <div className='flex-element'><ListOfTopPosts/></div>
-                 <div className='middle-flex-element'><LisOfCards names={names}/></div>
-                 <div className='flex-element-controls'>13
-                 
-                 <button>Click me</button>
-                 
-                 </div> */}
+                
                  {(this.state.topPosts===null) ? <div className='flex-element'>Loading...</div>:<div className='flex-element'><ListOfTopPosts posts={topPosts}/></div> }
                  {(this.state.posts===null) ? <div className='middle-flex-element'>Loading...</div>:<div className='middle-flex-element'><LisOfCards posts={posts}/></div> }
                  <div className='flex-element-controls'>
