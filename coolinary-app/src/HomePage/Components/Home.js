@@ -1,9 +1,12 @@
 import React,{Component} from 'react';
+import Button from '@material-ui/core/Button';
 import  '../CSS/Home.css'
 import {withRouter} from 'react-router-dom'
 import LisOfCards from './ListOfCards'
 import ListOfTopPosts from './ListOfTopPosts'
 import {getAllPostsEndPoint,getAllTopPostsEndPoint} from '../../appConfig/EndPoints'
+
+
 class Home extends Component{
     state = {
         posts:null,
@@ -54,6 +57,7 @@ class Home extends Component{
     handleCreatePost=()=>{
         this.props.history.push('/CreateRecipe')
     }
+    handleMyPosts=()=>this.props.history.push('/UserPage')
     
     render(){  
         const {posts,topPosts} = this.state;
@@ -62,19 +66,16 @@ class Home extends Component{
         return(
           
              <div className='flex-container'>
-                 {/* <div className='flex-element'><ListOfTopPosts/></div>
-                 <div className='middle-flex-element'><LisOfCards names={names}/></div>
-                 <div className='flex-element-controls'>13
-                 
-                 <button>Click me</button>
-                 
-                 </div> */}
+                
                  {(this.state.topPosts===null) ? <div className='flex-element'>Loading...</div>:<div className='flex-element'><ListOfTopPosts posts={topPosts}/></div> }
                  {(this.state.posts===null) ? <div className='middle-flex-element'>Loading...</div>:<div className='middle-flex-element'><LisOfCards posts={posts}/></div> }
                  <div className='flex-element-controls'>
                  
                  
-                 <button onClick={this.handleCreatePost}>Create Post</button>
+                 <Button variant="contained" color="primary" onClick={this.handleCreatePost}>Create Post</Button>
+                 <Button variant="contained" color="primary" onClick={this.handleMyPosts}>
+                     My Posts
+                 </Button>
                  </div> 
                  
             </div>

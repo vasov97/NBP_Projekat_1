@@ -33,8 +33,8 @@ class CreateRecipe extends Component{
              </textarea>
            
             <h4 className='add-padding'>Recipe Type:</h4>
-            <div>
             
+            <div>
             <label className='add-padding'><input type="checkbox" value='Sweet' />Sweet</label>
             <label className='add-padding'><input type="checkbox" value='Salty' />Salty</label>
 
@@ -44,8 +44,8 @@ class CreateRecipe extends Component{
 
             <label className='add-padding'><input name='hotcold' type="radio" value='Hot'/>Hot</label>
             <label className='add-padding'><input name='hotcold' type="radio" value='Cold'/>Cold</label>
-           
-            <div/>
+            </div>
+           <div>
             <textarea rows="12" cols="50">
             Description:
              </textarea>
@@ -56,9 +56,11 @@ class CreateRecipe extends Component{
              <Button variant="contained" color="primary">
               Cancel
              </Button>
+             
              </div>
             </div>
             </div>
+           
            
            
            

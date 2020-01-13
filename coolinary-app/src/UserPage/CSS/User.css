@@ -10,19 +10,18 @@
     align-items: center;
 }
 
-.buttonDiv{
-    display: flex;
-    justify-content: space-evenly;
-   
-}
 
-.recipeDiv{
+
+.userDetails
+{
     display:flex;
     position: absolute; top: 0; left: 0; height: 100%; width: 100%;
-    flex-direction:row;
+    flex-direction:column;
+    align-items: center;
    
 }
-.recipeDataDiv{
+.userRecipes
+{
     display:flex;
     top: 0; left: 0; height: 100%; 
     flex-direction:column;
@@ -31,6 +30,3 @@
    
 }
 
-.divFlexElement{
-    flex-grow: 5;
-}

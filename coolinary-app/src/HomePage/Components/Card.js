@@ -5,7 +5,7 @@ import CardActions from '@material-ui/core/CardActions';
 import CardContent from '@material-ui/core/CardContent';
 import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
-
+import {withRouter} from 'react-router-dom'
 const useStyles = makeStyles({
   card: {
     minWidth: 275,
@@ -29,16 +29,16 @@ class SimpleCard extends Component{
     getPostUser=(post)=>{
        //get user of POST!
     }
-    handleLearnMore=(post,user)=>{
+    handleLearnMore=(post,user,clickedBy)=>{
         console.log(post)
-        //redirect to new page for post
+       this.props.history.push("/Recipe")
     }
 render(){
     
 
 
-  const post=this.props.post;
-  const user=this.props.user;
+  
+  const {clickedBy,post,user}=this.props;
   
   const bull = <span className={useStyles.bullet}>•</span>;
   let displayDescription=post.description.slice(0,(post.description.length)/2)
@@ -63,7 +63,7 @@ render(){
             </Typography>
           </CardContent>
           <CardActions>
-            <Button size="small" onClick={()=>this.handleLearnMore(post,user)}>Learn More</Button>
+            <Button size="small" onClick={()=>this.handleLearnMore(post,user,clickedBy)}>Learn More</Button>
           </CardActions>
         </Card>
       
@@ -74,4 +74,4 @@ render(){
 }}
 
 
-export default SimpleCard;
+export default withRouter(SimpleCard);
