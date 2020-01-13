@@ -59,7 +59,7 @@ router.post('/login', (req, res) =>{
   .then((result)=>{
     if(result.records.length==0){
       session.close()
-      res.send(connectionResponse.createError("400","Email is already in use"));
+      res.send(connectionResponse.createError("400","Wrong username"));
     }
     else {
       const newUser = result.records[0].get('user');
@@ -110,7 +110,7 @@ router.post('/dislikePost',(req,res)=>{
   });
 });
 
-router.get('/getUser/:username', function(req, res, next) 
+router.get('/getUser/:username', (req, res, next)=> 
 { 
   var neo4jClient = require('../src/Neo4JConnection');
   const session = neo4jClient.driver.session();
