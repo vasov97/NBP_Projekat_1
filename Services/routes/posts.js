@@ -44,7 +44,7 @@ router.post('/createPost', (req, res) =>{
   });
 });
 
-router.get('/getAllPosts',(req,res)=>{
+router.get('/getTopPosts',(req,res)=>{
 
   var neo4jClient = require('../src/Neo4JConnection');
   const session = neo4jClient.driver.session();
