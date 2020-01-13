@@ -9,11 +9,15 @@ router.get('/',(req,res)=>{
 });
 
 router.post('/createPost', (req, res) =>{
+  
+ var ourDate=new Date();
   const post = {
     title: req.body.title,
+    ingredients:req.body.ingredients,
     description:req.body.description,
-    createdAt:ourdate.toISOString()
+    createdAt:ourDate.toISOString(),
   }
+  
   var neo4jClient = require('../src/Neo4JConnection');
   const session = neo4jClient.driver.session();
   session.run(postQueries.matchPostByTitle, { title:post.title })
@@ -33,11 +37,13 @@ router.post('/createPost', (req, res) =>{
           session.close();
         });
       }).catch(error=>{
+        console.log(error);
         res.send(connectionResponse.createError("500","Server error"));
         session.close();
       });
     }
   }).catch(error=>{
+    console.log(error)
     res.send(connectionResponse.createError("500","Server error"));
     session.close();
   });

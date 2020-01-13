@@ -1,7 +1,7 @@
 module.exports={
     matchPostByTitle:'MATCH (post:Post {title:{title}}) RETURN post',
     createPost: 'MATCH (user:User {username:{username}})'+
-                'CREATE (post:Post {title:{title}, description : {description}, createdAt : {createdAt}})'+
+                'CREATE (post:Post {title:{title}, ingredients : {ingredients}, description : {description}, createdAt : {createdAt}})'+
                 'CREATE (user)-[r:Posted]->(post) RETURN r',
     connectPostTypes: 'MATCH (post:Post {title:{title}})'+
                       'MERGE (type:Type {type:{type}})'+
