@@ -64,7 +64,14 @@ router.post('/login', (req, res) =>{
     }
     else {
       const newUser = result.records[0].get('user');
-      cacheLogIn(newUser.properties);
+      const cacheId = 'logedInUser:'+newUser.properties.username;
+      redisConnection.createConnection().then(client=>{
+        client.hmset([cacheId,
+          "username",newUser.properties.username,
+          "email",newUser.properties.email],(error,result)=>{
+            client.expire(cacheId,43200);
+          });
+      });
       if(compare(user.password, newUser.properties.password))
         res.send(connectionResponse.createResponse("200","Loging in!",newUser.properties));
       else
@@ -86,6 +93,18 @@ router.post('/likePost',(req,res)=>{
     date:req.body.date
   })
   .then((result)=>{
+    redisConnection.createConnection().then(client=>{
+      cacheId = 'post'+req.body.postTitle;
+      client.exists(cacheId,(error,result)=>{
+        if (error){
+          console.log("Error in cache");
+          client.quit();
+        }
+        else if(result){
+          client.hincrby(cacheId,"numOfLikes",1);
+        }
+      })
+    })
     res.send(connectionResponse.createResponse("200","Like created"));
     session.close();
   })
@@ -103,6 +122,18 @@ router.post('/dislikePost',(req,res)=>{
     postTitle:req.body.postTitle,
   })
   .then((result)=>{
+    redisConnection.createConnection().then(client=>{
+      cacheId = 'post'+req.body.postTitle;
+      client.exists(cacheId,(error,result)=>{
+        if (error){
+          console.log("Error in cache");
+          client.quit();
+        }
+        else if(result){
+          client.hdecby(cacheId,"numOfLikes",1);
+        }
+      })
+    })
     res.send(connectionResponse.createResponse("200","Post is disliked"));
     session.close();
   })
@@ -131,13 +162,14 @@ router.get('/getUser/:username', (req, res)=>
 router.get('/getLogedUser/:username',(req,res)=>{
   redisConnection.createConnection().then(client=>{
     cashId = "logedInUser:"+req.params.username;
-    client.hgetall(cashId,(err,result)=>{
+    client.hgetall(cashId,(error,result)=>{
       if(error)
         res.send(connectionResponse.createError("500","Server error"));
       else if(result == null)
         res.send(connectionResponse.createError("404","User not logged"));
       else 
         res.send(connectionResponse.createResponse("200","User found",result));
+      client.quit();
     })
   })
 });
@@ -162,15 +194,6 @@ router.get('/logoutUser/:username',(req,res)=>{
     });
   })
 })
-
-function cacheLogIn(userProperties){
-  const cacheId = 'logedInUser:'+userProperties.username;
-  redisConnection.createConnection().then(client=>{
-    client.hmset([cacheId,
-      "username",userProperties.us,
-      "email",user.properties.email]);
-  });
-}
 
 function hash(rawPassword, options = {}) {
 

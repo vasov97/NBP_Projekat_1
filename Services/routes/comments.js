@@ -43,7 +43,7 @@ redisConnection.createConnection().then(client=>{
                         element.text = result;
                         data.push(element);
                         if(index== Object.keys(allCommentsOfPost).length-1)
-                            res.send(connectionResponse.createResponse("200",data));
+                            res.send(connectionResponse.createResponse("200","Comments",data));
                     })
                 });
             });
@@ -59,6 +59,7 @@ router.post('/createComment',(req,res)=>{
         title:req.body.title,
         text:req.body.text})
     .then((result)=>{
+        res.send(result);
         res.send(connectionResponse.createResponse("200","Comment created"));
         session.close();
     })
