@@ -58,7 +58,23 @@ router.post('/createComment',(req,res)=>{
         username:req.body.username,
         title:req.body.title,
         text:req.body.text})
-    .then((result)=>{
+    .then((neoResult)=>{
+        redisConnection.createConnection().then(client=>{
+            cacheId='comment:'+req.body.title;
+            client.exists(cacheId,(err, result)=>{
+                if(error){
+                    console.log("Error in cache");
+                    client.quit();
+                }
+                else if(result){
+                    let comment=neoResult.records[0].get("comment");
+                    let username = neoResult.records[0].get("user").username;
+                    client.hmset([cacheId,comment.identity.low,username]);
+                    client.hmset('comment:'+comment.identity.low,comment.text);
+                    client.quit();
+                }
+            })
+        })
         res.send(connectionResponse.createResponse("200","Comment created"));
         session.close();
     })

@@ -113,19 +113,37 @@ router.post('/dislikePost',(req,res)=>{
 });
 
 router.get('/getUser/:username', (req, res)=> 
-{ 
-  var neo4jClient = require('../src/Neo4JConnection');
-  const session = neo4jClient.driver.session();
-  session.run(userQueries.matchUserByUsername,{username:req.params.username})
-  .then((result)=>{
-    if(!result.records){
-      res.send(connectionResponse.createError("404","User not found"))
-    }
-    else{
-      res.send(result.records[0].get('user'));
-    }}).catch((error)=>{
-      res.send(error);
+{
+  redisConnection.createConnection().then((client)=>{
+    client.hgetall('user:'+req.params.username,(err,result)=>{
+      if(result===null){
+        var neo4jClient = require('../src/Neo4JConnection');
+        const session = neo4jClient.driver.session();
+        session.run(userQueries.matchUserByUsername,{username:req.params.username})
+        .then((result)=>{
+          if((result.records.length)===0){
+            res.send(connectionResponse.createError("404","User not found"));
+            session.close();
+          }
+          else{
+            var myUser=result.records[0].get('user').properties;
+            redisConnection.createConnection().then((client)=>{
+              client.hmset(['user:'+req.params.username,"username",myUser.username,"email",myUser.email],(err,result)=>{
+                if(err)
+                  console.log(err);
+                else
+                  client.expire('user:'+req.params.username,300);
+              })})
+            session.close();
+            res.send(connectionResponse.createResponse("200",'User found', myUser));
+          }})
+          .catch((error)=>{
+            res.send(connectionResponse.createResponse("500","Server error"));
+          })
+      } else
+          res.send(connectionResponse.createResponse("200","User found",result));
     })
+  });
 });
 
 router.get('/getLogedUser/:username',(req,res)=>{
