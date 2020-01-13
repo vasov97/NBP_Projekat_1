@@ -9,10 +9,11 @@ router.get('/',(req,res)=>{
 });
 
 router.post('/createPost', (req, res) =>{
+  let date = new Date();
   const post = {
     title: req.body.title,
     description:req.body.description,
-    createdAt:ourdate.toISOString()
+    createdAt:date.toISOString()
   }
   var neo4jClient = require('../src/Neo4JConnection');
   const session = neo4jClient.driver.session();

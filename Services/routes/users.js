@@ -1,5 +1,6 @@
 const connectionResponse = require('../src/ConnectionResponse');
 const userQueries = require('../queries/userQueries');
+const redisConnection = require('../src/RedisConnection');
 const express = require('express');
 const md5 = require("md5");
 const router = express.Router();
@@ -63,6 +64,7 @@ router.post('/login', (req, res) =>{
     }
     else {
       const newUser = result.records[0].get('user');
+      cacheLogIn(newUser.properties);
       if(compare(user.password, newUser.properties.password))
         res.send(connectionResponse.createResponse("200","Loging in!",newUser.properties));
       else
@@ -110,7 +112,7 @@ router.post('/dislikePost',(req,res)=>{
   });
 });
 
-router.get('/getUser/:username', (req, res, next)=> 
+router.get('/getUser/:username', (req, res)=> 
 { 
   var neo4jClient = require('../src/Neo4JConnection');
   const session = neo4jClient.driver.session();
@@ -125,6 +127,50 @@ router.get('/getUser/:username', (req, res, next)=>
       res.send(error);
     })
 });
+
+router.get('/getLogedUser/:username',(req,res)=>{
+  redisConnection.createConnection().then(client=>{
+    cashId = "logedInUser:"+req.params.username;
+    client.hgetall(cashId,(err,result)=>{
+      if(error)
+        res.send(connectionResponse.createError("500","Server error"));
+      else if(result == null)
+        res.send(connectionResponse.createError("404","User not logged"));
+      else 
+        res.send(connectionResponse.createResponse("200","User found",result));
+    })
+  })
+});
+
+router.get('/logoutUser/:username',(req,res)=>{
+  redisConnection.createConnection().then(client=>{
+    cacheId = 'logedInUser:'+req.params.username;
+    client.exists(cacheId,(err,result)=>{
+      if(result){
+        client.del(cacheId,(err,result)=>{
+          if(err){
+            res.send(connectionResponse.createError("500","Server error"));
+          }
+          else if (result){
+            res.send(connectionResponse.createResponse("200","User logedout",true));
+          }
+        })
+      }
+      else{
+        res.send(connectionResponse.createError("404","User not loged in"))
+      }
+    });
+  })
+})
+
+function cacheLogIn(userProperties){
+  const cacheId = 'logedInUser:'+userProperties.username;
+  redisConnection.createConnection().then(client=>{
+    client.hmset([cacheId,
+      "username",userProperties.us,
+      "email",user.properties.email]);
+  });
+}
 
 function hash(rawPassword, options = {}) {
 
