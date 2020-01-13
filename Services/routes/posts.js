@@ -9,13 +9,12 @@ router.get('/',(req,res)=>{
 });
 
 router.post('/createPost', (req, res) =>{
-  
- var ourDate=new Date();
+  let date = new Date();
   const post = {
     title: req.body.title,
     ingredients:req.body.ingredients,
     description:req.body.description,
-    createdAt:ourDate.toISOString(),
+    createdAt:date.toISOString()
   }
   
   var neo4jClient = require('../src/Neo4JConnection');
@@ -49,7 +48,7 @@ router.post('/createPost', (req, res) =>{
   });
 });
 
-router.get('/getAllPosts',(req,res)=>{
+router.get('/getTopPosts',(req,res)=>{
 
   var neo4jClient = require('../src/Neo4JConnection');
   const session = neo4jClient.driver.session();
@@ -120,9 +119,10 @@ router.get('/getPostsByUser/:username', (req, res, next)=> {
   })
 });
 
-router.get('/getPost/:title', (req, res, next)=> {
+router.get('/getPost/:title', (req, res)=> {
   redisConnection.createConnection().then((client)=>{
-    client.hgetall('post:'+req.params.title,(err,results)=>{
+    cacheId = 'post:'+req.params.title;
+    client.hgetall(cacheId,(err,results)=>{
       if (results===null) {
         var neo4jClient = require('../src/Neo4JConnection');
         const session = neo4jClient.driver.session();
@@ -134,15 +134,24 @@ router.get('/getPost/:title', (req, res, next)=> {
           }
           else{
             var myPost=result.records[0].get('post').properties;
-            redisConnection.createConnection().then((client)=>{
-              client.hmset(['post:'+req.params.title,"title",myPost.title,"description",myPost.description,"createdAt",myPost.createdAt],(err,result)=>{
-                if(err)
-                console.log(err)
-                else
-                  client.expire('post:'+req.params.title,300);
-              })})
-            session.close();
-            res.send(connectionResponse.createResponse("200","Post found",myPost));
+            session.run(postQueries.getNumOfLikes,{title:req.params.title})
+            .then((result)=>{
+              myPost.numOfLikes = result.records[0].get('numOfLikes').low;
+              redisConnection.createConnection().then((client)=>{
+                client.hmset([cacheId,
+                  "title",myPost.title,
+                  "description",myPost.description,
+                  "createdAt",myPost.createdAt,
+                  "numOfLikes",myPost.numOfLikes],(err,result)=>{
+                  if(err)
+                    console.log(err)
+                  else
+                    client.expire(cacheId,300);
+                })});
+              session.close();
+              res.send(connectionResponse.createResponse("200","Post found",myPost));
+            })
+            .catch(error=>{console.log(error);})
           }})
         .catch((error)=>{
             res.send(connectionResponse.createResponse("500","Server error"));

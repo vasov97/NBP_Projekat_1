@@ -1,5 +1,6 @@
 const connectionResponse = require('../src/ConnectionResponse');
 const userQueries = require('../queries/userQueries');
+const redisConnection = require('../src/RedisConnection');
 const express = require('express');
 const md5 = require("md5");
 const router = express.Router();
@@ -63,6 +64,14 @@ router.post('/login', (req, res) =>{
     }
     else {
       const newUser = result.records[0].get('user');
+      const cacheId = 'logedInUser:'+newUser.properties.username;
+      redisConnection.createConnection().then(client=>{
+        client.hmset([cacheId,
+          "username",newUser.properties.username,
+          "email",newUser.properties.email],(error,result)=>{
+            client.expire(cacheId,43200);
+          });
+      });
       if(compare(user.password, newUser.properties.password))
         res.send(connectionResponse.createResponse("200","Loging in!",newUser.properties));
       else
@@ -84,6 +93,18 @@ router.post('/likePost',(req,res)=>{
     date:req.body.date
   })
   .then((result)=>{
+    redisConnection.createConnection().then(client=>{
+      cacheId = 'post'+req.body.postTitle;
+      client.exists(cacheId,(error,result)=>{
+        if (error){
+          console.log("Error in cache");
+          client.quit();
+        }
+        else if(result){
+          client.hincrby(cacheId,"numOfLikes",1);
+        }
+      })
+    })
     res.send(connectionResponse.createResponse("200","Like created"));
     session.close();
   })
@@ -101,6 +122,18 @@ router.post('/dislikePost',(req,res)=>{
     postTitle:req.body.postTitle,
   })
   .then((result)=>{
+    redisConnection.createConnection().then(client=>{
+      cacheId = 'post'+req.body.postTitle;
+      client.exists(cacheId,(error,result)=>{
+        if (error){
+          console.log("Error in cache");
+          client.quit();
+        }
+        else if(result){
+          client.hdecby(cacheId,"numOfLikes",1);
+        }
+      })
+    })
     res.send(connectionResponse.createResponse("200","Post is disliked"));
     session.close();
   })
@@ -110,21 +143,75 @@ router.post('/dislikePost',(req,res)=>{
   });
 });
 
-router.get('/getUser/:username', (req, res, next)=> 
-{ 
-  var neo4jClient = require('../src/Neo4JConnection');
-  const session = neo4jClient.driver.session();
-  session.run(userQueries.matchUserByUsername,{username:req.params.username})
-  .then((result)=>{
-    if(!result.records){
-      res.send(connectionResponse.createError("404","User not found"))
-    }
-    else{
-      res.send(result.records[0].get('user'));
-    }}).catch((error)=>{
-      res.send(error);
+router.get('/getUser/:username', (req, res)=> 
+{
+  redisConnection.createConnection().then((client)=>{
+    client.hgetall('user:'+req.params.username,(err,result)=>{
+      if(result===null){
+        var neo4jClient = require('../src/Neo4JConnection');
+        const session = neo4jClient.driver.session();
+        session.run(userQueries.matchUserByUsername,{username:req.params.username})
+        .then((result)=>{
+          if((result.records.length)===0){
+            res.send(connectionResponse.createError("404","User not found"));
+            session.close();
+          }
+          else{
+            var myUser=result.records[0].get('user').properties;
+            redisConnection.createConnection().then((client)=>{
+              client.hmset(['user:'+req.params.username,"username",myUser.username,"email",myUser.email],(err,result)=>{
+                if(err)
+                  console.log(err);
+                else
+                  client.expire('user:'+req.params.username,300);
+              })})
+            session.close();
+            res.send(connectionResponse.createResponse("200",'User found', myUser));
+          }})
+          .catch((error)=>{
+            res.send(connectionResponse.createResponse("500","Server error"));
+          })
+      } else
+          res.send(connectionResponse.createResponse("200","User found",result));
     })
+  });
 });
+
+router.get('/getLogedUser/:username',(req,res)=>{
+  redisConnection.createConnection().then(client=>{
+    cashId = "logedInUser:"+req.params.username;
+    client.hgetall(cashId,(error,result)=>{
+      if(error)
+        res.send(connectionResponse.createError("500","Server error"));
+      else if(result == null)
+        res.send(connectionResponse.createError("404","User not logged"));
+      else 
+        res.send(connectionResponse.createResponse("200","User found",result));
+      client.quit();
+    })
+  })
+});
+
+router.get('/logoutUser/:username',(req,res)=>{
+  redisConnection.createConnection().then(client=>{
+    cacheId = 'logedInUser:'+req.params.username;
+    client.exists(cacheId,(err,result)=>{
+      if(result){
+        client.del(cacheId,(err,result)=>{
+          if(err){
+            res.send(connectionResponse.createError("500","Server error"));
+          }
+          else if (result){
+            res.send(connectionResponse.createResponse("200","User logedout",true));
+          }
+        })
+      }
+      else{
+        res.send(connectionResponse.createError("404","User not loged in"))
+      }
+    });
+  })
+})
 
 function hash(rawPassword, options = {}) {
 

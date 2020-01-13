@@ -20,11 +20,13 @@ redisConnection.createConnection().then(client=>{
                 let comments = [];
                 result.records.forEach((singleRecord)=>{comments.push(getCommentFromRecord(singleRecord));});
                 session.close();
-                var array=getArray(req.body.title,comments)
+                var array=getArray(req.body.title,comments);
+                client.expire('comment:'+req.body.title,180);
                 redisConnection.createConnection().then(client=>{
                     client.hmset(array);
                     comments.forEach(comment=>{
-                        client.set('comment:'+comment.id,comment.text)
+                        client.set('comment:'+comment.id,comment.text);
+                        client.expire('comment:'+comment.id,180);
                     })
                 })
                 res.send(connectionResponse.createResponse("200",'Comments',comments));
@@ -58,8 +60,23 @@ router.post('/createComment',(req,res)=>{
         username:req.body.username,
         title:req.body.title,
         text:req.body.text})
-    .then((result)=>{
-        console.log(result);
+    .then((neoResult)=>{
+        redisConnection.createConnection().then(client=>{
+            cacheId='comment:'+req.body.title;
+            client.exists(cacheId,(error, result)=>{
+                if(error){
+                    console.log("Error in cache");
+                    client.quit();
+                }
+                else if(result){
+                    let comment=neoResult.records[0].get("comment");
+                    let username = neoResult.records[0].get("user").properties.username;
+                    client.hmset([cacheId,comment.identity.low,username]);
+                    client.set('comment:'+comment.identity.low,comment.properties.text);
+                    client.quit();
+                }
+            })
+        })
         res.send(connectionResponse.createResponse("200","Comment created"));
         session.close();
     })

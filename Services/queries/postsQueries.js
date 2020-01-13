@@ -14,5 +14,9 @@ module.exports={
     matchMostLikedPosts:"MATCH (user:User)-[l:Likes]->(post:Post) "
                     +   "RETURN post, COUNT(l) as numberOfLikes "
                     +   "ORDER BY numberOfLikes DESC "
-                    +   "LIMIT $topN"
+                    +   "LIMIT $topN",
+    getNumOfLikes:"MATCH (user:User)-[l:Likes]->(post:Post) "
+                + "WHERE post.title = {title} "
+                + "RETURN COUNT(l) as numOfLikes"
+
 }
