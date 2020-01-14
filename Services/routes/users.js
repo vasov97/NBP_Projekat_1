@@ -1,4 +1,5 @@
 const connectionResponse = require('../src/ConnectionResponse');
+const postQueries = require('../queries/postsQueries');
 const userQueries = require('../queries/userQueries');
 const redisConnection = require('../src/RedisConnection');
 const express = require('express');
@@ -16,7 +17,7 @@ router.post('/createUser', (req, res) =>{
     password : hash(req.body.password,{salt:req.body.username}),
     email : req.body.email 
   }
-  var neoClient = require('../src/Neo4JConnection');
+  const neoClient = require('../src/Neo4JConnection');
   const session = neoClient.driver.session();
   session.run(userQueries.matchUserByEmail,{ email:user.email })
   .then((result)=>{
@@ -60,20 +61,25 @@ router.post('/login', (req, res) =>{
   .then((result)=>{
     if(result.records.length==0){
       session.close()
-      res.send(connectionResponse.createError("400","Wrong username"));
+      res.send(connectionResponse.createError("404","Username is wrong or does not exist."));
     }
     else {
       const newUser = result.records[0].get('user');
-      const cacheId = 'logedInUser:'+newUser.properties.username;
-      redisConnection.createConnection().then(client=>{
-        client.hmset([cacheId,
-          "username",newUser.properties.username,
-          "email",newUser.properties.email],(error,result)=>{
-            client.expire(cacheId,43200);
-          });
-      });
-      if(compare(user.password, newUser.properties.password))
+      if(compare(user.password, newUser.properties.password)){
+        const cacheId = 'logedInUser:'+newUser.properties.username;
+        redisConnection.createConnection().then(client=>{
+          client.hmset([cacheId,
+            "username",newUser.properties.username,
+            "email",newUser.properties.email],(error,result)=>{
+              if(error)
+                console.log(error);
+              else
+                client.expire(cacheId,calculateHours(4));
+              client.quit();
+            });
+        });
         res.send(connectionResponse.createResponse("200","Loging in!",newUser.properties));
+      }
       else
         res.send(connectionResponse.createError("404","Wrong password"));
       session.close();
@@ -93,28 +99,52 @@ router.post('/likePost',(req,res)=>{
     date:req.body.date
   })
   .then((result)=>{
-    redisConnection.createConnection().then(client=>{
-      cacheId = 'post'+req.body.postTitle;
-      client.exists(cacheId,(error,result)=>{
-        if (error){
-          console.log("Error in cache");
-          client.quit();
-        }
-        else if(result){
-          client.hincrby(cacheId,"numOfLikes",1);
-        }
+    if(result.records.length==0){
+      session.close();
+      res.send(connectionResponse.createError("404","User or post do not exist"));
+    }
+    else{
+      redisConnection.createConnection().then(client=>{
+        cacheId = 'post:'+req.body.postTitle;
+        client.exists(cacheId,(error,result)=>{
+          if (error){
+            console.log("Error in cache");
+            client.quit();
+          }
+          else if(result){
+            session.run(postQueries.getNumOfLikes,{title:req.body.postTitle})
+            .then((result)=>{
+              numOfLikes = result.records[0].get('numOfLikes').low;
+              redisConnection.createConnection().then((client)=>{
+                client.hmset([cacheId,
+                  "numOfLikes",numOfLikes],(err,result)=>{
+                  if(err){
+                    client.quit();
+                    console.log(err)
+                  }
+                  else{
+                    client.quit();
+                    client.expire(cacheId,300);
+                  }
+                })});
+              session.close();
+              res.send(connectionResponse.createResponse("200","Like created"));
+            })
+            client.quit();
+          }
+        })
       })
-    })
-    res.send(connectionResponse.createResponse("200","Like created"));
-    session.close();
+    }
   })
   .catch(error=>{
-    res.send(connectionResponse.createError("500","Server error"));
     session.close();
+    console.log(error);
+    res.send(connectionResponse.createError("500","Server error"));
   });
 });
 
 router.post('/dislikePost',(req,res)=>{
+
   const NeoClient=require('../src/Neo4JConnection');
   const session = NeoClient.driver.session();
   session.run(userQueries.dislikePost,{
@@ -123,19 +153,35 @@ router.post('/dislikePost',(req,res)=>{
   })
   .then((result)=>{
     redisConnection.createConnection().then(client=>{
-      cacheId = 'post'+req.body.postTitle;
+      cacheId = 'post:'+req.body.postTitle;
       client.exists(cacheId,(error,result)=>{
         if (error){
           console.log("Error in cache");
           client.quit();
         }
         else if(result){
-          client.hdecby(cacheId,"numOfLikes",1);
+          session.run(postQueries.getNumOfLikes,{title:req.body.postTitle})
+            .then((result)=>{
+              numOfLikes = result.records[0].get('numOfLikes').low;
+              redisConnection.createConnection().then((client)=>{
+                client.hmset([cacheId,
+                  "numOfLikes",numOfLikes],(err,result)=>{
+                  if(err){
+                    client.quit();
+                    console.log(err)
+                  }
+                  else{
+                    client.quit();
+                    client.expire(cacheId,300);
+                  }
+                })});
+                res.send(connectionResponse.createResponse("200","Post is disliked"));
+                session.close();
+            })
+          client.quit();
         }
       })
     })
-    res.send(connectionResponse.createResponse("200","Post is disliked"));
-    session.close();
   })
   .catch(error=>{
     res.send(connectionResponse.createError("500","Server error"));
@@ -160,10 +206,14 @@ router.get('/getUser/:username', (req, res)=>
             var myUser=result.records[0].get('user').properties;
             redisConnection.createConnection().then((client)=>{
               client.hmset(['user:'+req.params.username,"username",myUser.username,"email",myUser.email],(err,result)=>{
-                if(err)
+                if(err){
+                  client.quit();
                   console.log(err);
-                else
+                }
+                else{
                   client.expire('user:'+req.params.username,300);
+                  client.quit();
+                }
               })})
             session.close();
             res.send(connectionResponse.createResponse("200",'User found', myUser));
@@ -194,7 +244,7 @@ router.get('/getLogedUser/:username',(req,res)=>{
 
 router.get('/logoutUser/:username',(req,res)=>{
   redisConnection.createConnection().then(client=>{
-    cacheId = 'logedInUser:'+req.params.username;
+    cacheId = 'loggedInUser:'+req.params.username;
     client.exists(cacheId,(err,result)=>{
       if(result){
         client.del(cacheId,(err,result)=>{
@@ -202,12 +252,12 @@ router.get('/logoutUser/:username',(req,res)=>{
             res.send(connectionResponse.createError("500","Server error"));
           }
           else if (result){
-            res.send(connectionResponse.createResponse("200","User logedout",true));
+            res.send(connectionResponse.createResponse("200","User logged out",true));
           }
         })
       }
       else{
-        res.send(connectionResponse.createError("404","User not loged in"))
+        res.send(connectionResponse.createError("404","User not logged in"))
       }
     });
   })
@@ -234,6 +284,10 @@ function compare(rawPassword, hashedPassword) {
   } catch (error) {
     throw Error(error.message);
   }
+}
+
+function calculateHours(numOfHours){
+  return numOfHours*3600;
 }
 
 module.exports = router;
