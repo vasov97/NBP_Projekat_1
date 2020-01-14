@@ -1,5 +1,4 @@
 module.exports={
-    matchPostByTitle:'MATCH (post:Post {title:{title}}) RETURN post',
     createPost: 'MATCH (user:User {username:{username}})'+
                 'CREATE (post:Post {title:{title}, description : {description}, createdAt : {createdAt}})'+
                 'CREATE (user)-[r:Posted]->(post) RETURN r',
@@ -17,6 +16,17 @@ module.exports={
                     +   "LIMIT $topN",
     getNumOfLikes:"MATCH (user:User)-[l:Likes]->(post:Post) "
                 + "WHERE post.title = {title} "
-                + "RETURN COUNT(l) as numOfLikes"
+                + "RETURN COUNT(l) as numOfLikes",
 
+    deletePost:"MATCH (post:Post) WHERE post.title=$postTitle DETACH DELETE post",
+
+    editPost:"MATCH (post:Post) WHERE post.title=$postTitle "
+            +"SET post.description=$postDescription RETURN post",
+
+    deleteTypeInPost:"MATCH (post:Post)-[r:IsOf]->(type:Type) "
+                    +"WHERE post.title=$postTitle AND type.type=$typeOfPost DELETE r",
+
+    addTypeToPost:"MATCH (post:Post),(type:Type) "
+                + "WHERE post.title=$postTitle AND type.type=$typeOfPost "
+                + "CREATE (post)-[r:IsOf]->(type)"
 }
