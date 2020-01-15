@@ -244,7 +244,7 @@ router.get('/getLogedUser/:username',(req,res)=>{
 
 router.get('/logoutUser/:username',(req,res)=>{
   redisConnection.createConnection().then(client=>{
-    cacheId = 'loggedInUser:'+req.params.username;
+    cacheId = 'logedInUser:'+req.params.username;
     client.exists(cacheId,(err,result)=>{
       if(result){
         client.del(cacheId,(err,result)=>{

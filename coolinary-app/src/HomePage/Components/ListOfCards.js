@@ -9,7 +9,7 @@ class LisOfCards extends Component{
     
     render(){  
         const {posts,user,page} = this.props;
-        console.log(posts)
+       
         return(
             <div>
            {(posts===undefined) ? <div>Loading...</div>:<div>

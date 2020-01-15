@@ -21,12 +21,20 @@ module.exports={
     deletePost:"MATCH (post:Post) WHERE post.title=$postTitle DETACH DELETE post",
 
     editPost:"MATCH (post:Post) WHERE post.title=$postTitle "
-            +"SET post.description=$postDescription RETURN post",
+            +"SET post.description=$postDescription, post.ingredients=$ingredients RETURN post",
 
-    deleteTypeInPost:"MATCH (post:Post)-[r:IsOf]->(type:Type) "
-                    +"WHERE post.title=$postTitle AND type.type=$typeOfPost DELETE r",
+    deleteTypeInPost:"MATCH (post:Post {title:$title}),(t:Type {type:$typeName}) "
+                    +"OPTIONAL MATCH (post)-[r:IsOf]->(t) "
+                    +"DELETE r",
 
-    addTypeToPost:"MATCH (post:Post),(type:Type) "
-                + "WHERE post.title=$postTitle AND type.type=$typeOfPost "
-                + "CREATE (post)-[r:IsOf]->(type)"
+    addTypeToPost:"MATCH (post:Post {title:$postTitle})  "
+                + "MERGE (type:Type {type:$typeName})"
+                + "MERGE (post)-[r:IsOf]->(type)",
+   
+    isPostLiked:"MATCH (user:User), (post:Post) "
+                + "WHERE user.username = $username AND post.title = $title "
+                + "RETURN EXISTS ((user)-[:Likes]->(post)) AS isLiked",
+    getUserFromPost:"MATCH (user:User)-[:Posted]->(post:Post) "
+                + "WHERE post.title = $title "
+                + "RETURN user"
 }

@@ -6,6 +6,10 @@ import CardContent from '@material-ui/core/CardContent';
 import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
 import {withRouter} from 'react-router-dom'
+import {
+  getUserFromPost,
+ 
+} from '../../appConfig/EndPoints'
 const useStyles = makeStyles({
   card: {
     minWidth: 275,
@@ -24,10 +28,36 @@ const useStyles = makeStyles({
 });
 
 class SimpleCard extends Component{
+state={
+  userOfPost:null
 
- 
-    getPostUser=(post)=>{
-      //user nekog posta
+}
+  componentDidMount()
+  {
+     this.getPostUser();
+  }
+    getPostUser=()=>{
+      const {page,post,user}=this.props;
+      var payload={
+        title:post.title,
+      }
+      fetch(getUserFromPost, {
+        method: 'POST',
+        headers:{
+            'Content-Type': 'application/json'
+        },
+        body:JSON.stringify(payload)     
+      })
+      .then((response) => response.json())
+      .then((data) => {
+       
+        this.setState({
+          userOfPost:data.object
+        })
+
+       
+       
+      })
     }
     handleLearnMore=(post,user,page)=>{
      
@@ -39,7 +69,7 @@ render(){
 
   
   const {page,post,user}=this.props;
-  
+  const {userOfPost}=this.state;
   
   const bull = <span className={useStyles.bullet}>•</span>;
   let displayDescription=post.description.slice(0,(post.description.length)/2)
@@ -51,7 +81,7 @@ render(){
              {post.title}
             </Typography>
             <Typography variant="h5" component="h2">
-            By {this.getPostUser(post)}{bull}
+            By {(userOfPost===null)? "":userOfPost}{bull}
             </Typography>
             <Typography className={useStyles.pos} color="textSecondary">
               Description
@@ -60,7 +90,7 @@ render(){
              
                {displayDescription}
               <br />
-              {'"Happy Coocking"'}
+              {post.numOfLikes+" Likes"}
             </Typography>
           </CardContent>
           <CardActions>

@@ -5,7 +5,14 @@ import TextField from '@material-ui/core/TextField';
 import {withRouter} from 'react-router-dom'
 import LisOfCards from './ListOfCards'
 import ListOfTopPosts from './ListOfTopPosts'
-import {getAllPostsEndPoint,getAllTopPostsEndPoint,getLogedUserendPoint, getUsersPostsendPoint,getPostByTitleendpoint} from '../../appConfig/EndPoints'
+import {
+    getAllPostsEndPoint,
+    getAllTopPostsEndPoint, 
+    getUsersPostsendPoint,
+    getPostByTitleendpoint,
+    checkIfUserIsLogedEndPoint,
+    logOutUserEndPoint,
+} from '../../appConfig/EndPoints'
 
 
 class Home extends Component{
@@ -18,10 +25,7 @@ class Home extends Component{
     componentDidMount(){
         this.getAllPosts()
         this.getAllTopPosts()
-        this.getLogedUser()
-       
-       
-       
+        this.getLogedUser()  
     }
     search=(defineSearch)=>{
      if(defineSearch==='username')
@@ -74,10 +78,31 @@ class Home extends Component{
            }})
     }
     getLogedUser=()=>{
-        //uzmi kesiranog usera
         this.setState({
             logedUser:this.props.location.state.user
             
+        },()=>this.checkIfUserIsLoged())
+    }
+    checkIfUserIsLoged=()=>{
+        const {logedUser}=this.state;
+        console.log(logedUser)
+        fetch(checkIfUserIsLogedEndPoint+"/"+logedUser.username, {
+            method: 'GET',
+            headers:{
+                'Content-Type': 'application/json'
+            }
+              
+          })
+          .then((response) => response.json())
+          .then((data) => {
+          
+           if(data.status!==200)
+           {
+            
+            this.props.history.push("/")
+             
+           }
+          
         })
     }
     getAllPosts=()=>{
@@ -112,6 +137,7 @@ class Home extends Component{
           
            if(data.status===200)
            {
+              
              this.setState({
                 topPosts:data.object
              })
@@ -121,12 +147,29 @@ class Home extends Component{
         this.props.history.push('/CreateRecipe',{user:user})
     }
     handleMyPosts=(user)=>this.props.history.push('/UserPage',{user:user,page:"defined"})
+
+    handleLogOut=()=>{
+        const {logedUser}=this.state;
+        fetch(logOutUserEndPoint+"/"+logedUser.username, {
+            method: 'GET',
+            headers:{
+                'Content-Type': 'application/json'
+            }
+              
+          })
+          .then((response) => response.json())
+          .then((data) => {
+          
+           if(data.status===200)
+           {
+              
+               this.props.history.push("/")
+             
+           }})
+    }
    
     render(){  
         const {posts,topPosts,logedUser} = this.state;
-        console.log("MyUser",logedUser)
-        
-
         return(
           
              <div className='flex-container'>
@@ -135,7 +178,7 @@ class Home extends Component{
                  {(this.state.posts===null) ? <div className='middle-flex-element'>Loading...</div>:<div className='middle-flex-element'><LisOfCards posts={posts} user={logedUser} page={undefined}/></div> }
                  <div className='flex-element-controls' >
                  
-                 
+                 <Button variant="contained" color="primary" onClick={()=>this.handleLogOut()}>LogOut</Button>
                  <Button variant="contained" color="primary" onClick={()=>this.handleCreatePost(logedUser)}>Create Post</Button>
                  <Button variant="contained" color="primary" onClick={()=>this.handleMyPosts(logedUser)}>
                      My Posts

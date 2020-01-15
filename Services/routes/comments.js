@@ -21,14 +21,15 @@ redisConnection.createConnection().then(client=>{
                 result.records.forEach((singleRecord)=>{comments.push(getCommentFromRecord(singleRecord));});
                 session.close();
                 var array=getArray(req.body.title,comments);
-                client.expire('comment:'+req.body.title,180);
                 redisConnection.createConnection().then(client=>{
                     client.hmset(array);
+                    client.expire('comment:'+req.body.title,180);
                     comments.forEach(comment=>{
                         client.set('comment:'+comment.id,comment.text);
                         client.expire('comment:'+comment.id,180);
                     })
                 })
+                console.log(comments);
                 res.send(connectionResponse.createResponse("200",'Comments',comments));
             })
         }
