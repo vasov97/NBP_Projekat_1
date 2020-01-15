@@ -140,6 +140,7 @@ router.get('/getPost/:title', (req, res)=> {
               redisConnection.createConnection().then((client)=>{
                 client.hmset([cacheId,
                   "title",myPost.title,
+                  "ingredients",myPost.ingredients,
                   "description",myPost.description,
                   "createdAt",myPost.createdAt,
                   "numOfLikes",myPost.numOfLikes],(err,result)=>{
