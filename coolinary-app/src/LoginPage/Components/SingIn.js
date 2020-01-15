@@ -31,8 +31,8 @@ class SingIn extends Component{
           .then((data) => {
            if(data.status==200)
            {
-               
-               this.props.history.push("/Home")
+               console.log(data.object)
+               this.props.history.push("/Home",{user:data.object})
            }
            else
            {

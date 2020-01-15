@@ -2,6 +2,8 @@ import React,{Component} from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
+import {withRouter} from 'react-router-dom'
+import {createPostendPoint} from '../../appConfig/EndPoints'
 import '../CSS/Recipe.css'
 
 const useStyles = makeStyles(theme => ({
@@ -17,18 +19,69 @@ const useStyles = makeStyles(theme => ({
 
 
 class CreateRecipe extends Component{
+state={
+  logedUser:null
+}
 
+componentDidMount(){
+  this.getLogedUser()
+}
+getLogedUser=()=>{
+  this.setState({
+      logedUser:this.props.location.state.user
+      
+  })
+}
+hadnleCreatePost=(user)=>{
+        
+        var ingredients=document.getElementById('Ingredients').value;
+        var description=document.getElementById('Description').value;
+        var title=document.getElementById('Title').value;
+        var typeArray=[]
+        document.querySelectorAll("input:checked").forEach((element)=>{
+          typeArray.push(element.value)
+        });
+       
+
+      var payload={
+        username:user.username,
+        title:title,
+        ingredients:ingredients,
+        description:description,
+        types:typeArray
+
+      }
+      this.createPost(payload,user)
+      
+}
+createPost=(payload,user)=>{
+  fetch(createPostendPoint, {
+    method: 'POST',
+    headers:{
+        'Content-Type': 'application/json'
+    },
+    body:JSON.stringify(payload)     
+  })
+  .then((response) => response.json())
+  .then((data) => {
+   
+      this.props.history.push('/Home',{user:user})
+   
+   
+  })
+}
     
     render(){  
-        
+        const {logedUser}=this.state;
+       
         return(
           
         
            <div className='createRecipeDiv'>
             <div className='add-padding'><h3 className='text3D'>Create Recipe!</h3></div>
-            <div  className='add-padding'><TextField id="title" label="Title" /></div>
+            <div  className='add-padding'><TextField id="Title" label="Title" /></div>
             
-            <textarea className='add-padding' rows="8" cols="50">
+            <textarea id='Ingredients' className='add-padding' rows="8" cols="50">
             Ingredients:
              </textarea>
            
@@ -46,11 +99,11 @@ class CreateRecipe extends Component{
             <label className='add-padding'><input name='hotcold' type="radio" value='Cold'/>Cold</label>
             </div>
            <div>
-            <textarea rows="12" cols="50">
+            <textarea id='Description' rows="12" cols="50">
             Description:
              </textarea>
              <div className='buttonDiv'>
-             <Button variant="contained" color="primary">
+             <Button onClick={()=>this.hadnleCreatePost(logedUser)}variant="contained" color="primary">
               Post
              </Button>
              <Button variant="contained" color="primary">
@@ -72,4 +125,4 @@ class CreateRecipe extends Component{
     }
 } 
 
-export default CreateRecipe;
+export default withRouter(CreateRecipe);

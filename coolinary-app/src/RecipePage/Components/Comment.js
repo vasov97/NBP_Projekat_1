@@ -12,9 +12,9 @@ class Comment extends Component{
         return(
           
             <div>
-                <Typography variant="subtitle1">Tittle: Salata</Typography>
+                <Typography variant="subtitle1">By: {comment.username}</Typography>
                 <textarea disabled rows="4" cols='40'>
-                    Neki komentar
+                {comment.text}
                 </textarea>
             </div>
          

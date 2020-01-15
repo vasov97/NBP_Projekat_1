@@ -27,18 +27,19 @@ class SimpleCard extends Component{
 
  
     getPostUser=(post)=>{
-       //get user of POST!
+      //user nekog posta
     }
-    handleLearnMore=(post,user,clickedBy)=>{
-        console.log(post)
-       this.props.history.push("/Recipe")
+    handleLearnMore=(post,user,page)=>{
+     
+       this.props.history.push("/Recipe",{post:post,user:user,page:page})
     }
 render(){
     
 
 
   
-  const {clickedBy,post,user}=this.props;
+  const {page,post,user}=this.props;
+  
   
   const bull = <span className={useStyles.bullet}>•</span>;
   let displayDescription=post.description.slice(0,(post.description.length)/2)
@@ -50,7 +51,7 @@ render(){
              {post.title}
             </Typography>
             <Typography variant="h5" component="h2">
-            By Milan{bull}
+            By {this.getPostUser(post)}{bull}
             </Typography>
             <Typography className={useStyles.pos} color="textSecondary">
               Description
@@ -63,7 +64,7 @@ render(){
             </Typography>
           </CardContent>
           <CardActions>
-            <Button size="small" onClick={()=>this.handleLearnMore(post,user,clickedBy)}>Learn More</Button>
+            <Button size="small" onClick={()=>this.handleLearnMore(post,user,page)}>Learn More</Button>
           </CardActions>
         </Card>
       

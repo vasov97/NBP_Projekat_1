@@ -8,22 +8,29 @@ class LisOfCards extends Component{
 
     
     render(){  
-        const {posts} = this.props;
+        const {posts,user,page} = this.props;
         console.log(posts)
         return(
-          
+            <div>
+           {(posts===undefined) ? <div>Loading...</div>:<div>
             <ul className='ListRoot'>
      
-             {  
-                posts.map((post, index) => 
-                    <li className='MyMuiListItem-root' key={index}>
-                        <Card post={post}/>
-                    </li>
-                )
-            } 
+            {  
+               posts.map((post, index) => 
+                   <li className='MyMuiListItem-root' key={index}>
+                       <Card post={post} user={user} page={page}/>
+                   </li>
+               )
+           } 
+           
+           
+           </ul>
             
-            
-            </ul>
+            </div>
+
+           }
+           </div>
+           
          
         )
     }

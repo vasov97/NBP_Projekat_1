@@ -1,5 +1,13 @@
 export const adress = 'http://localhost:3001/'
-export const loginEndPoint = adress + "usersN4/login"
-export const singUpEndPoint = adress + 'usersN4/createUser'
-export const getAllPostsEndPoint= adress+'postsN4/getAllPosts'
-export const getAllTopPostsEndPoint=adress+'postsN4/getTopLiked'
+export const loginEndPoint = adress + "users/login"
+export const singUpEndPoint = adress + 'users/createUser'
+export const getAllPostsEndPoint= adress+'posts/getTopPosts'
+export const getAllTopPostsEndPoint=adress+'posts/getTopLiked'
+export const createPostendPoint=adress+'posts/createPost'
+export const getTypesOfPostendPoint=adress+'posts/getTypesOfPost'
+export const getCommentsendPOint=adress+'comments/getPostComments'
+export const createCommentendPoint=adress+'comments/createComment'
+export const getUsersPostsendPoint=adress+"posts/getPostsByUser"
+export const getLogedUserendPoint=adress+"user/getLogedUser"
+export const getPostByTitleendpoint=adress+"posts/getPost"
+export const likePostEndPoint=adress+"users/likePost"

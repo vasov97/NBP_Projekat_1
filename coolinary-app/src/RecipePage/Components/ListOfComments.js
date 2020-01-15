@@ -8,18 +8,29 @@ class ListOfComments extends Component{
     
     render(){  
         const {comments} = this.props;
-        console.log(comments)
+        
         return(
-          
-            <ul className='ListRoot'>
-              {  
-                comments.map((comment, index) => 
-                    <li className='MyMuiListItem-root' key={index}>
-                        <Comment comment={comment}/>
-                    </li>
-                )
-            } 
-             </ul>
+            <div>
+                {(comments===null || comments===undefined) ? <div><p>No Comments Posted</p></div> :
+                <div>
+                    {(comments.length===0) ? <div><p>No Comments Posted</p></div>:
+                    
+                    <ul className='ListRoot'>
+                    {  
+                      comments.map((comment, index) => 
+                          <li className='MyMuiListItem-root' key={index}>
+                              <Comment comment={comment}/>
+                          </li>
+                      )
+                  } 
+                   </ul>
+                    }
+                
+                </div>
+                
+                }
+            </div>
+           
          
         )
     }

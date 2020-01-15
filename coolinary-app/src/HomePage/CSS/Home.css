@@ -28,6 +28,8 @@
 }
 .flex-element-controls{
     flex-grow:4.5;
+    display:flex;
+    flex-direction: column;
   }
 .middle-flex-element{
     flex-grow: 4.5;
@@ -39,7 +41,11 @@
     display:block
 }
 
-
+.searchDiv
+{
+    flex-direction: row;
+    
+}
 
 .ListRoot{
     list-style-type: none;
