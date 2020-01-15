@@ -50,7 +50,7 @@ router.post('/createPost', (req, res) =>{
 
 router.get('/getTopPosts',(req,res)=>{
 
-  var neo4jClient = require('../src/Neo4JConnection');
+  const neo4jClient = require('../src/Neo4JConnection');
   const session = neo4jClient.driver.session();
   session.run(postQueries.getNewestPosts)
   .then((result)=>{
@@ -67,11 +67,14 @@ router.get('/getTopPosts',(req,res)=>{
           client.hmset(['post:'+singlePost.title,"title",singlePost.title,
           "description",singlePost.description,
           "createdAt",singlePost.createdAt],(err,result)=>{
-            if(err)
+            if(err){
               console.log(err);
+              client.quit();
+            }
             else{
               console.log(result);
               client.expire('post:'+singlePost.title,300);
+              client.quit()
             }
           });
         });
@@ -84,7 +87,7 @@ router.get('/getTopPosts',(req,res)=>{
   })
 });
 
-router.get('/getPostsByUser/:username', (req, res, next)=> {
+router.get('/getPostsByUser/:username', (req, res)=> {
   var neo4jClient = require('../src/Neo4JConnection');
   const session = neo4jClient.driver.session();
   session.run(postQueries.matchPostByUser,{username:req.params.username})
@@ -96,24 +99,41 @@ router.get('/getPostsByUser/:username', (req, res, next)=> {
     else{
       var postArray=[];
       result.records.forEach(record=>postArray.push({ ...record.get('post').properties }));
-      postArray.map(singlePost=>{
-        redisConnection.createConnection().then(client=>{
-          client.hmset(['post:'+singlePost.title,"title",singlePost.title,
-          "description",singlePost.description,
-          "createdAt",singlePost.createdAt],(err,result)=>{
-            if(err)
-              console.log(err);
-            else{
-              client.expire('post:'+singlePost.title,300);
-            }
-          });
-        });
+      postArray.forEach((singlePost,index,array)=>{
+        let newSession = neo4jClient.driver.session();
+        newSession.run(postQueries.getNumOfLikes, {title:singlePost.title})
+        .then(numOfLikesResult=>{
+          postArray[index].numOfLikes = numOfLikesResult.records[0].get('numOfLikes').low;
+          singlePost.numOfLikes = numOfLikesResult.records[0].get('numOfLikes').low;
+          redisConnection.createConnection().then(client=>{
+            const cacheId = 'post:'+singlePost.title;
+            client.hmset([cacheId,
+              "title",singlePost.title,
+              "description",singlePost.description,
+              "createdAt",singlePost.createdAt,
+              "numOfLikes",singlePost.numOfLikes],(error,result)=>{
+                if(error){
+                  console.log(error);
+                  client.quit();
+                }
+                else if(result !=null ){
+                  client.expire(cacheId,300);
+                  client.quit();
+                }
+            })
+          })
+          if(index === array.length-1){
+            console.log(postArray);
+            res.send(connectionResponse.createResponse("200","Posts",postArray));
+          }
+          newSession.close();
+        })
       });
       session.close();
-      res.send(connectionResponse.createResponse("200","Posts",postArray))
     }
   })
   .catch((error)=>{
+    console.log(error);
     session.close();
     res.send(connectionResponse.createError("500","Server error"));
   })
@@ -144,10 +164,14 @@ router.get('/getPost/:title', (req, res)=> {
                   "description",myPost.description,
                   "createdAt",myPost.createdAt,
                   "numOfLikes",myPost.numOfLikes],(err,result)=>{
-                  if(err)
+                  if(err){
+                    client.quit();
                     console.log(err)
-                  else
+                  }
+                  else{
+                    client.quit();
                     client.expire(cacheId,300);
+                  }
                 })});
               session.close();
               res.send(connectionResponse.createResponse("200","Post found",myPost));
@@ -167,12 +191,13 @@ router.get('/getPostsOfType/:type',(req,res)=>{
     const NeoClient = require('../src/Neo4JConnection');
     const session = NeoClient.driver.session();
     
-    session.run(postQueries.matchPostByType,{nameOfType:req.params.type}).then((result)=>{
+    session.run(postQueries.matchPostByType,{nameOfType:req.params.type})
+    .then((result)=>{
         let posts = [];
         result.records.forEach((singleRecord)=>{posts.push(getPostFromRecord(singleRecord));});
         //KESIRANJE NECEGA
         session.close();
-        res.send(connectionResponse.createResponse("200","Post found",posts));
+        res.send(connectionResponse.createResponse("200","Posts found",posts));
     })
 });
 
@@ -215,6 +240,76 @@ router.get('/getTopLiked/:topN',(req,res)=>{
     session.close();
   })
 })
+
+router.post('/deletePost/:title',(req,res)=>{
+  const NeoClient=require('../src/Neo4JConnection');
+  const session =NeoClient.driver.session();
+  session.run(postQueries.deletePost,{postTitle:req.params.title})
+  .then((result)=>{
+    res.send(connectionResponse.createResponse("200","Post deleted"));
+    session.close();
+  })
+  .catch(error=>{
+    res.send(connectionResponse.createError("500","Server error"));
+    session.close();
+  });
+});
+
+router.post('/editPost',(req,res)=>{
+  const NeoClient=require('../src/Neo4JConnection');
+  const session=NeoClient.driver.session();
+  session.run(postQueries.editPost,{postTitle:req.body.title,postDescription:req.body.description})
+  .then((result)=>{
+    res.send(connectionResponse.createResponse("200","Post edited"));
+    let myPostCreatedAt=result.records[0].get("post").properties.createdAt;
+    session.close();
+    redisConnection.createConnection().then((client)=>{
+      cacheId = 'post:'+req.body.postTitle;
+      client.hmset([cacheId,
+        "title",req.body.postTitle,
+        "description",req.body.postDescription,
+        "createdAt",myPostCreatedAt],(err,res)=>{
+          if(err)
+            console.log(err);
+          else
+            client.expire(cacheId,300);
+      });
+    })
+  })
+  .catch(error=>{
+    console.log(error);
+    res.send(connectionResponse.createError("500","Server error"));
+    session.close();
+  });
+});
+
+router.post('/deleteTypeInPost',(req,res)=>{
+  const NeoClient=require('../src/Neo4JConnection');
+  const session=NeoClient.driver.session();
+  session.run(postQueries.deleteTypeInPost,{postTitle:req.body.title,typeOfPost:req.body.type})
+  .then((result)=>{
+    res.send(connectionResponse.connectionResponse("200","Type deleted"));
+    session.close();
+  }).catch(error=>{
+    console.log(error);
+    res.send(connectionResponse.createError("500","Server error"));
+    session.close();
+  })
+});
+
+router.post('/addTypeToPost',(req,res)=>{
+  const NeoClient=require('../src/Neo4JConnection');
+  const session=NeoClient.driver.session();
+  session.run(postQueries.addTypeToPost,{postTitle:req.body.title,typeOfPost:req.body.type})
+  .then((result)=>{
+    res.send(connectionResponse.createResponse("200","Type added"));
+    session.close();
+  }).catch(error=>{
+    console.log(error);
+    res.send(connectionResponse.createError("500","Server error "));
+    session.close();
+  })
+});
 
 function getPostFromRecord(record){
     var myPost = {
